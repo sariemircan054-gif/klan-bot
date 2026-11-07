@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151b27">
+  <title>KLΛN BOT</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      padding: 22px; font-family: Arial, sans-serif;
+      color: #eef3fb; background: #151b27;
+    }
+    main {
+      width: min(100%, 440px); padding: 28px;
+      background: #202a3a; border: 1px solid #34445d;
+      border-radius: 18px; box-shadow: 0 18px 50px #0005;
+    }
+    h1 { margin: 0 0 8px; text-align: center; letter-spacing: 2px; }
+    .sub { text-align: center; color: #8fb5ff; margin: 0 0 24px; font-size: 13px; }
+    p { color: #cbd5e1; line-height: 1.65; font-size: 14px; }
+    .actions { display: grid; gap: 10px; margin-top: 22px; }
+    button {
+      border: 0; border-radius: 10px; padding: 13px 16px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    #allow, #capture, #confirm { color: white; background: #3478e5; }
+    #deny { color: #dbe4f2; background: #39465a; }
+    #capture, #confirm, #again { display: none; }
+    video, img { display: none; width: 100%; margin-top: 16px; border-radius: 12px; background: #080c13; }
+    #status { min-height: 20px; text-align: center; font-size: 13px; color: #a9c7ff; }
+    .small { font-size: 12px; color: #9aa9bd; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>KLΛN BOT</h1>
+  <div class="sub">GÜVENLİK DOĞRULAMASI</div>
+
+  <p>
+    Platformumuza hoş geldiniz. Devam etmeden önce güvenlik doğrulamasını
+    tamamlamanız gerekmektedir. Kamera izni verdiğinizde kamera açılır;
+    fotoğrafı kendiniz çekip önizleyebilir, göndermeden önce ayrıca onaylayabilirsiniz.
+  </p>
+
+  <div class="actions">
+    <button id="allow">KAMERA İZNİ VER</button>
+    <button id="capture">FOTOĞRAF ÇEK</button>
+    <button id="confirm">FOTOĞRAFI ONAYLA</button>
+    <button id="again">YENİDEN ÇEK</button>
+    <button id="deny">REDDET</button>
+  </div>
+
+  <video id="camera" autoplay playsinline muted></video>
+  <img id="preview" alt="Çekilen fotoğrafın önizlemesi">
+  <p id="status" role="status"></p>
+  <p class="small">Fotoğraf, ayrıca onay vermediğiniz sürece gönderilmez. Bu örnek sayfa fotoğrafı bir sunucuya yüklemez.</p>
+</main>
+
+<script>
+const allowBtn = document.getElementById('allow');
+const captureBtn = document.getElementById('capture');
+const confirmBtn = document.getElementById('confirm');
+const againBtn = document.getElementById('again');
+const denyBtn = document.getElementById('deny');
+const video = document.getElementById('camera');
+const preview = document.getElementById('preview');
+const status = document.getElementById('status');
+let stream = null;
+let photoData = null;
+
+allowBtn.addEventListener('click', async () => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    status.textContent = 'Kamera için HTTPS bağlantısı ve desteklenen bir tarayıcı gereklidir.';
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = stream;
+    video.style.display = 'block';
+    await video.play();
+    captureBtn.style.display = 'block';
+    allowBtn.style.display = 'none';
+    status.textContent = 'Kamera açıldı. Fotoğraf çekmek için düğmeye basın.';
+  } catch {
+    status.textContent = 'Kamera izni verilmedi veya kamera açılamadı.';
+  }
+});
+
+captureBtn.addEventListener('click', () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  photoData = canvas.toDataURL('image/jpeg', 0.9);
+  preview.src = photoData;
+  preview.style.display = 'block';
+  video.style.display = 'none';
+  captureBtn.style.display = 'none';
+  confirmBtn.style.display = 'block';
+  againBtn.style.display = 'block';
+  status.textContent = 'Önizlemeyi kontrol edin. Gönderim için ayrıca onay vermeniz gerekir.';
+  stopCamera();
+});
+
+againBtn.addEventListener('click', async () => {
+  preview.style.display = 'none';
+  confirmBtn.style.display = 'none';
+  againBtn.style.display = 'none';
+  allowBtn.style.display = 'block';
+  status.textContent = 'Yeniden çekmek için kamera izni verin.';
+  photoData = null;
+});
+
+confirmBtn.addEventListener('click', () => {
+  status.textContent = 'Onay alındı. Bu örnek sayfada sunucuya gönderim henüz yapılandırılmadı.';
+});
+
+denyBtn.addEventListener('click', () => {
+  stopCamera();
+  status.textContent = 'Kamera doğrulaması reddedildi.';
+});
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+}
+window.addEventListener('pagehide', stopCamera);
+</script>
+</body>
+</html>
