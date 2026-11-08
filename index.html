@@ -4,64 +4,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#151b27">
 <title>KLΛN BOT</title>
 <style>
+* { box-sizing: border-box; }
 body {
-  background:#151b27;
-  color:white;
-  font-family:Arial,sans-serif;
-  text-align:center;
-  padding:20px;
+  background: #151b27;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 20px;
 }
 main {
-  max-width:420px;
-  margin:50px auto;
-  padding:25px;
-  background:#222c3d;
-  border-radius:16px;
+  max-width: 420px;
+  margin: 50px auto;
+  padding: 25px;
+  background: #222c3d;
+  border-radius: 16px;
 }
 button {
-  width:100%;
-  padding:15px;
-  margin-top:15px;
-  border:0;
-  border-radius:9px;
-  background:#3478f6;
-  color:white;
-  font-size:16px;
+  width: 100%;
+  padding: 15px;
+  margin-top: 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #3478f6;
+  color: white;
+  font-size: 16px;
 }
-button:disabled { opacity:.5; }
-video { display:none; }
-label { display:block; margin-top:20px; }
-#status { margin-top:18px; }
+button:disabled { opacity: .5; }
+video { display: none; }
+label {
+  display: block;
+  margin-top: 20px;
+  line-height: 1.5;
+}
+#status { margin-top: 18px; }
 </style>
 </head>
 <body>
 <main>
-<h2>KLΛN BOT</h2>
-<p>Bu işlem sırasında kameranızla fotoğraf çekilecek ve özel sunucuya gönderilecektir. Fotoğrafı yalnızca yetkili yönetici görüntüleyebilir.</p>
+  <h2>KLΛN BOT</h2>
 
-<label>
-<input type="checkbox" id="consent">
-Fotoğrafımın çekilip gönderilmesini kabul ediyorum.
-</label>
+  <p>
+    Kameranızla bir fotoğraf çekilecek ve özel sunucuya
+    gönderilecektir. Fotoğrafı yalnızca yetkili yönetici
+    görüntüleyebilir. Gönderim için onayınız gerekir.
+  </p>
 
-<button id="camera">Kamerayı Aç</button>
-<video id="video" autoplay playsinline></video>
-<button id="send" disabled>Fotoğrafımı Gönder</button>
-<p id="status"></p>
+  <label>
+    <input type="checkbox" id="consent">
+    Fotoğrafımın çekilip gönderilmesini kabul ediyorum.
+  </label>
+
+  <button id="camera">Kamerayı Aç</button>
+
+  <video id="video" autoplay playsinline></video>
+
+  <button id="send" disabled>Fotoğrafımı Gönder</button>
+
+  <p id="status" role="status"></p>
 </main>
 
 <script>
 const FUNCTION_URL =
-"https://ljnaqmvglhvkcfaieofh.supabase.co/functions/v1/super-service";
+  "https://ljnaqmvglhvkcfaieofh.supabase.co/functions/v1/super-service";
 
 const PUBLISHABLE_KEY =
-"sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
+  "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
 
-// Supabase eski anon JWT anahtarını buraya ekle.
-// Publishable anahtar JWT yerine geçmez.
-const LEGACY_ANON_JWT = "BURAYA_LEGACY_ANON_JWT";
+// Supabase Eski API Anahtarları bölümündeki anon JWT:
+const LEGACY_ANON_JWT = "BURAYA_KENDİ_ANON_JWT_ANAHTARINI_YAPIŞTIR";
 
 const video = document.getElementById("video");
 const camera = document.getElementById("camera");
@@ -76,6 +89,7 @@ function stopCamera() {
     stream.getTracks().forEach(track => track.stop());
     stream = null;
   }
+
   video.srcObject = null;
   send.disabled = true;
 }
@@ -91,17 +105,23 @@ camera.onclick = async () => {
       video: { facingMode: "user" },
       audio: false
     });
+
     video.srcObject = stream;
     await video.play();
+
     send.disabled = false;
-    status.textContent = "Kamera hazır. Göndermek için butona basın.";
-  } catch {
+    status.textContent =
+      "Kamera hazır. Fotoğrafı göndermek için butona basın.";
+  } catch (error) {
     status.textContent = "Kamera açılamadı.";
   }
 };
 
 send.onclick = async () => {
-  if (!consent.checked || !stream) return;
+  if (!consent.checked || !stream) {
+    status.textContent = "Önce onay verip kamerayı açın.";
+    return;
+  }
 
   send.disabled = true;
   status.textContent = "Fotoğraf gönderiliyor...";
@@ -110,7 +130,10 @@ send.onclick = async () => {
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    canvas.getContext("2d").drawImage(
+      video, 0, 0, canvas.width, canvas.height
+    );
 
     const photo = canvas.toDataURL("image/jpeg", 0.85);
 
@@ -123,12 +146,15 @@ send.onclick = async () => {
       },
       body: JSON.stringify({
         consent: true,
-        photo
+        photo: photo
       })
     });
 
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Gönderim başarısız.");
+
+    if (!response.ok) {
+      throw new Error(result.error || "Gönderim başarısız.");
+    }
 
     status.textContent = "Fotoğraf gönderildi.";
   } catch (error) {
@@ -139,8 +165,13 @@ send.onclick = async () => {
 };
 
 consent.onchange = () => {
-  if (!consent.checked) stopCamera();
+  if (!consent.checked) {
+    stopCamera();
+    status.textContent = "Onay kaldırıldı.";
+  }
 };
+
+window.addEventListener("pagehide", stopCamera);
 </script>
 </body>
 </html>
