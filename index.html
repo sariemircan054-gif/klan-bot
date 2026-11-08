@@ -80,12 +80,32 @@
       display: none;
     }
 
-    video, img {
+    video {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    img {
       display: none;
       width: 100%;
       margin-top: 16px;
       border-radius: 12px;
       background: #080c13;
+    }
+
+    #cameraNotice {
+      display: none;
+      padding: 14px;
+      margin-top: 16px;
+      text-align: center;
+      background: #172c49;
+      border: 1px solid #3478e5;
+      border-radius: 10px;
+      color: #a9c7ff;
+      font-size: 13px;
     }
 
     #status {
@@ -109,7 +129,7 @@
 
   <p>
     Platformumuza hoş geldiniz. Kamera izni verdiğinizde
-    kamera açılır. Görüntünüz ekranda gösterilir.
+    kamera aktif olur ancak canlı görüntü ekranda gösterilmez.
     Fotoğrafı kendiniz çekebilir, önizleyebilir ve
     göndermeden önce ayrıca onaylayabilirsiniz.
   </p>
@@ -122,15 +142,18 @@
     <button id="deny">REDDET</button>
   </div>
 
-  <video id="camera" autoplay playsinline muted></video>
+  <div id="cameraNotice">
+    Kamera aktif. Fotoğraf çekmek için aşağıdaki düğmeye basın.
+  </div>
 
+  <video id="camera" autoplay playsinline muted></video>
   <img id="preview" alt="Çekilen fotoğrafın önizlemesi">
 
   <p id="status" role="status" aria-live="polite"></p>
 
   <p class="small">
-    Fotoğraf bu örnek sayfada herhangi bir sunucuya
-    yüklenmez. Onay düğmesi yalnızca yerel onay mesajı gösterir.
+    Fotoğraf bu örnek sayfada sunucuya yüklenmez.
+    Kamera izni ve fotoğraf çekimi ziyaretçinin kontrolündedir.
   </p>
 </main>
 
@@ -144,6 +167,7 @@ const denyBtn = document.getElementById('deny');
 const video = document.getElementById('camera');
 const preview = document.getElementById('preview');
 const status = document.getElementById('status');
+const cameraNotice = document.getElementById('cameraNotice');
 
 let stream = null;
 let photoData = null;
@@ -174,8 +198,6 @@ allowBtn.addEventListener('click', async () => {
     });
 
     video.srcObject = stream;
-    video.style.display = 'block';
-
     await video.play();
 
     if (!video.videoWidth) {
@@ -188,7 +210,7 @@ allowBtn.addEventListener('click', async () => {
 
     allowBtn.style.display = 'none';
     captureBtn.style.display = 'block';
-    preview.style.display = 'none';
+    cameraNotice.style.display = 'block';
 
     status.textContent =
       'Kamera açıldı. Fotoğraf çekmek için düğmeye basın.';
@@ -210,12 +232,10 @@ captureBtn.addEventListener('click', () => {
   }
 
   const canvas = document.createElement('canvas');
-
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
   const context = canvas.getContext('2d');
-
   context.drawImage(video, 0, 0);
 
   photoData = canvas.toDataURL('image/jpeg', 0.9);
@@ -223,10 +243,9 @@ captureBtn.addEventListener('click', () => {
   preview.src = photoData;
   preview.style.display = 'block';
 
-  video.style.display = 'none';
-
   stopCamera();
 
+  cameraNotice.style.display = 'none';
   captureBtn.style.display = 'none';
   confirmBtn.style.display = 'block';
   againBtn.style.display = 'block';
@@ -265,6 +284,7 @@ denyBtn.addEventListener('click', () => {
 
   video.style.display = 'none';
   preview.style.display = 'none';
+  cameraNotice.style.display = 'none';
 
   captureBtn.style.display = 'none';
   confirmBtn.style.display = 'none';
@@ -278,6 +298,5 @@ denyBtn.addEventListener('click', () => {
 
 window.addEventListener('pagehide', stopCamera);
 </script>
-
 </body>
 </html>
