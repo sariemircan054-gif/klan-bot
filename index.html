@@ -2,294 +2,145 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#151b27">
-  <title>KLΛN BOT - Fotoğraf Onayı</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      background: #151b27;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    main {
-      width: 100%;
-      max-width: 430px;
-      padding: 25px;
-      background: #202a3a;
-      border-radius: 18px;
-      text-align: center;
-    }
-
-    h2 { margin-top: 5px; }
-
-    p {
-      color: #cbd5e1;
-      line-height: 1.6;
-    }
-
-    button {
-      width: 100%;
-      padding: 15px;
-      margin-top: 13px;
-      border: 0;
-      border-radius: 9px;
-      background: #3478e5;
-      color: white;
-      font-weight: bold;
-      font-size: 15px;
-    }
-
-    button:disabled {
-      opacity: .45;
-    }
-
-    .green { background: #168653; }
-    .red { background: #a33b48; }
-
-    #message {
-      margin-top: 18px;
-      overflow-wrap: anywhere;
-      color: #a9c7ff;
-    }
-
-    #consentArea {
-      display: none;
-      margin-top: 18px;
-      padding: 12px;
-      background: #151b27;
-      border-radius: 10px;
-      text-align: left;
-    }
-
-    #consentArea label {
-      line-height: 1.5;
-      font-size: 14px;
-    }
-
-    #camera {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-      pointer-events: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KLΛN BOT</title>
+<style>
+body {
+  background:#151b27;
+  color:white;
+  font-family:Arial,sans-serif;
+  text-align:center;
+  padding:20px;
+}
+main {
+  max-width:420px;
+  margin:50px auto;
+  padding:25px;
+  background:#222c3d;
+  border-radius:16px;
+}
+button {
+  width:100%;
+  padding:15px;
+  margin-top:15px;
+  border:0;
+  border-radius:9px;
+  background:#3478f6;
+  color:white;
+  font-size:16px;
+}
+button:disabled { opacity:.5; }
+video { display:none; }
+label { display:block; margin-top:20px; }
+#status { margin-top:18px; }
+</style>
 </head>
-
 <body>
 <main>
-  <h2>KLΛN BOT</h2>
-  <h3>Fotoğraf Onayı</h3>
+<h2>KLΛN BOT</h2>
+<p>Bu işlem sırasında kameranızla fotoğraf çekilecek ve özel sunucuya gönderilecektir. Fotoğrafı yalnızca yetkili yönetici görüntüleyebilir.</p>
 
-  <p>
-    Bu sayfa kamera izninizi kullanarak bir fotoğraf çekmenizi sağlar.
-    Fotoğrafı çekmeden önce sizden izin istenir.
-    Onay verirseniz fotoğraf site yöneticisine gönderilir.
-    Fotoğraf özel depolama alanında saklanır.
-  </p>
+<label>
+<input type="checkbox" id="consent">
+Fotoğrafımın çekilip gönderilmesini kabul ediyorum.
+</label>
 
-  <video id="camera" autoplay playsinline muted></video>
-
-  <button id="allowBtn">KAMERA İZNİ VER</button>
-
-  <button id="captureBtn" disabled>
-    FOTOĞRAF ÇEK
-  </button>
-
-  <div id="consentArea">
-    <label>
-      <input type="checkbox" id="consent">
-      Çektiğim fotoğrafın KLΛN BOT yöneticisine gönderilmesini onaylıyorum.
-    </label>
-
-    <button id="sendBtn" class="green" disabled>
-      FOTOĞRAFI GÖNDER
-    </button>
-  </div>
-
-  <button id="againBtn" class="red" style="display:none">
-    YENİDEN ÇEK
-  </button>
-
-  <button id="denyBtn" class="red">
-    İPTAL ET
-  </button>
-
-  <p id="message"></p>
+<button id="camera">Kamerayı Aç</button>
+<video id="video" autoplay playsinline></video>
+<button id="send" disabled>Fotoğrafımı Gönder</button>
+<p id="status"></p>
 </main>
 
 <script>
-const SUPABASE_URL =
-  "https://ljnaqmvglhvkcfaieofh.supabase.co";
+const FUNCTION_URL =
+"https://ljnaqmvglhvkcfaieofh.supabase.co/functions/v1/super-service";
 
-const SUPABASE_KEY =
-  "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
+const PUBLISHABLE_KEY =
+"sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+// Supabase eski anon JWT anahtarını buraya ekle.
+// Publishable anahtar JWT yerine geçmez.
+const LEGACY_ANON_JWT = "BURAYA_LEGACY_ANON_JWT";
 
-const video = document.getElementById("camera");
-const allowBtn = document.getElementById("allowBtn");
-const captureBtn = document.getElementById("captureBtn");
-const sendBtn = document.getElementById("sendBtn");
-const againBtn = document.getElementById("againBtn");
-const denyBtn = document.getElementById("denyBtn");
+const video = document.getElementById("video");
+const camera = document.getElementById("camera");
+const send = document.getElementById("send");
 const consent = document.getElementById("consent");
-const consentArea = document.getElementById("consentArea");
-const message = document.getElementById("message");
+const status = document.getElementById("status");
 
 let stream = null;
-let photoBlob = null;
 
 function stopCamera() {
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
     stream = null;
   }
-
   video.srcObject = null;
-  captureBtn.disabled = true;
+  send.disabled = true;
 }
 
-function resetPage() {
-  stopCamera();
-  photoBlob = null;
-  consent.checked = false;
-  consentArea.style.display = "none";
-  againBtn.style.display = "none";
-  allowBtn.disabled = false;
-  allowBtn.style.display = "block";
-  captureBtn.disabled = true;
-  message.textContent = "";
-}
+camera.onclick = async () => {
+  if (!consent.checked) {
+    status.textContent = "Önce onay vermelisiniz.";
+    return;
+  }
 
-allowBtn.onclick = async () => {
   try {
-    message.textContent = "Kamera izni bekleniyor...";
-
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
       audio: false
     });
-
     video.srcObject = stream;
     await video.play();
-
-    allowBtn.style.display = "none";
-    captureBtn.disabled = false;
-    message.textContent =
-      "Kamera hazır. Fotoğraf çekmek için butona basın.";
-
-  } catch (error) {
-    message.textContent =
-      "Kamera açılamadı. Kamera iznini ve site bağlantısını kontrol edin.";
+    send.disabled = false;
+    status.textContent = "Kamera hazır. Göndermek için butona basın.";
+  } catch {
+    status.textContent = "Kamera açılamadı.";
   }
 };
 
-captureBtn.onclick = async () => {
-  if (!stream) return;
+send.onclick = async () => {
+  if (!consent.checked || !stream) return;
 
-  if (!video.videoWidth || !video.videoHeight) {
-    message.textContent = "Kamera henüz hazır değil.";
-    return;
+  send.disabled = true;
+  status.textContent = "Fotoğraf gönderiliyor...";
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    const photo = canvas.toDataURL("image/jpeg", 0.85);
+
+    const response = await fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": PUBLISHABLE_KEY,
+        "Authorization": "Bearer " + LEGACY_ANON_JWT
+      },
+      body: JSON.stringify({
+        consent: true,
+        photo
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Gönderim başarısız.");
+
+    status.textContent = "Fotoğraf gönderildi.";
+  } catch (error) {
+    status.textContent = "Hata: " + error.message;
+  } finally {
+    stopCamera();
   }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const context = canvas.getContext("2d");
-  context.drawImage(video, 0, 0);
-
-  photoBlob = await new Promise(resolve => {
-    canvas.toBlob(resolve, "image/jpeg", 0.9);
-  });
-
-  stopCamera();
-
-  if (!photoBlob) {
-    message.textContent = "Fotoğraf oluşturulamadı.";
-    return;
-  }
-
-  consentArea.style.display = "block";
-  againBtn.style.display = "block";
-  captureBtn.disabled = true;
-
-  message.textContent =
-    "Fotoğraf hazır. Göndermek için aşağıdaki onayı vermelisiniz.";
 };
 
 consent.onchange = () => {
-  sendBtn.disabled = !consent.checked || !photoBlob;
+  if (!consent.checked) stopCamera();
 };
-
-sendBtn.onclick = async () => {
-  if (!photoBlob || !consent.checked) return;
-
-  sendBtn.disabled = true;
-  againBtn.disabled = true;
-  denyBtn.disabled = true;
-
-  message.textContent = "Fotoğraf gönderiliyor...";
-
-  const fileName =
-    Date.now() + "-" + crypto.randomUUID() + ".jpg";
-
-  const { error } = await db.storage
-    .from("foto-inbox")
-    .upload(fileName, photoBlob, {
-      contentType: "image/jpeg",
-      upsert: false
-    });
-
-  if (error) {
-    message.textContent =
-      "Gönderilemedi: " + error.message;
-
-    sendBtn.disabled = false;
-    againBtn.disabled = false;
-    denyBtn.disabled = false;
-    return;
-  }
-
-  photoBlob = null;
-  consentArea.style.display = "none";
-  againBtn.style.display = "none";
-
-  message.textContent =
-    "Fotoğrafınız onayınızla yöneticiye gönderildi.";
-
-  denyBtn.textContent = "TAMAM";
-  denyBtn.disabled = false;
-};
-
-againBtn.onclick = () => {
-  resetPage();
-  message.textContent = "Yeniden başlayabilirsiniz.";
-};
-
-denyBtn.onclick = () => {
-  resetPage();
-  message.textContent = "İşlem iptal edildi.";
-};
-
-window.addEventListener("pagehide", stopCamera);
 </script>
 </body>
 </html>
