@@ -81,6 +81,12 @@ allowBtn.addEventListener('click', async () => {
   audio: false
 });
 video.srcObject = stream;
+video.style.display = 'block';
+video.style.opacity = '0';
+video.style.pointerEvents = 'none';
+await video.play();
+});
+video.srcObject = stream;
 video.style.display = 'none';
 await video.play(); audio: false });
   
