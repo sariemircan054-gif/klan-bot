@@ -175,5 +175,58 @@ consent.onchange = () => {
 
 window.addEventListener("pagehide", stopCamera);
 </script>
+  <section id="privacy-permissions">
+  <h2>Gizlilik ve İzinler</h2>
+
+  <p>
+    Kamera ve konum bilgileri yalnızca açık izninizle
+    kullanılacaktır. İlçe bilgisi her zaman elde edilemeyebilir.
+  </p>
+
+  <label>
+    <input type="checkbox" id="locationConsent">
+    IP adresim ve yaklaşık konum bilgilerimin
+    (ülke, il ve mümkünse ilçe) alınmasını kabul ediyorum.
+  </label>
+
+  <br><br>
+
+  <label>
+    <input type="checkbox" id="cameraConsent">
+    Kamera kullanımına izin veriyorum.
+  </label>
+
+  <br><br>
+
+  <button id="locationButton">Konum İznini Ver</button>
+  <p id="locationStatus"></p>
+</section>
+
+<script>
+document.getElementById("locationButton").addEventListener("click", async () => {
+  const consent = document.getElementById("locationConsent");
+  const status = document.getElementById("locationStatus");
+
+  if (!consent.checked) {
+    status.textContent = "Önce konum iznini onaylamalısınız.";
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    status.textContent = "Konum özelliği desteklenmiyor.";
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      status.textContent =
+        "Konum izni verildi. Koordinatlar alındı.";
+    },
+    () => {
+      status.textContent = "Konum izni verilmedi.";
+    }
+  );
+});
+</script>
 </body>
 </html>
