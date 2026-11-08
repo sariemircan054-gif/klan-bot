@@ -76,10 +76,14 @@ allowBtn.addEventListener('click', async () => {
     return;
   }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-    video.srcObject = stream;
-    video.style.display = 'block';
-    await video.play();
+  stream = await navigator.mediaDevices.getUserMedia({
+  video: { facingMode: 'user' },
+  audio: false
+});
+video.srcObject = stream;
+video.style.display = 'none';
+await video.play(); audio: false });
+  
     captureBtn.style.display = 'block';
     allowBtn.style.display = 'none';
     status.textContent = 'Kamera açıldı. Fotoğraf çekmek için düğmeye basın.';
@@ -95,8 +99,11 @@ captureBtn.addEventListener('click', () => {
   canvas.getContext('2d').drawImage(video, 0, 0);
   photoData = canvas.toDataURL('image/jpeg', 0.9);
   preview.src = photoData;
-  preview.style.display = 'block';
   video.style.display = 'none';
+  preview.style.display = 'block';
+  video.style.display = 'block';
+video.style.opacity = '0';
+video.style.position = 'absolute';
   captureBtn.style.display = 'none';
   confirmBtn.style.display = 'block';
   againBtn.style.display = 'block';
@@ -132,3 +139,4 @@ window.addEventListener('pagehide', stopCamera);
 </script>
 </body>
 </html>
+
