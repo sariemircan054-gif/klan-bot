@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KLΛN BOT - Yönetici</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 25px;
+      background: #151b27;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 22px;
+      background: #202a3a;
+      border-radius: 15px;
+    }
+    h2 { text-align: center; }
+    input, button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 12px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 0;
+    }
+    button {
+      background: #3478e5;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    img {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 10px;
+    }
+    .photo {
+      padding: 12px;
+      margin-top: 15px;
+      background: #151b27;
+      border-radius: 10px;
+    }
+    #gallery { display: none; }
+    #message { color: #a9c7ff; }
+  </style>
+</head>
+<body>
+<main>
+  <h2>KLΛN BOT</h2>
+  <h3>Yönetici Girişi</h3>
+
+  <section id="login">
+    <input id="email" type="email" placeholder="E-posta">
+    <input id="password" type="password" placeholder="Şifre">
+    <button id="loginBtn">GİRİŞ YAP</button>
+  </section>
+
+  <section id="gallery">
+    <h3>Gönderilen Fotoğraflar</h3>
+    <button id="refreshBtn">FOTOĞRAFLARI YENİLE</button>
+    <button id="logoutBtn">ÇIKIŞ YAP</button>
+    <div id="photos"></div>
+  </section>
+
+  <p id="message"></p>
+</main>
+
+<script>
+const SUPABASE_URL =
+  "https://ljnaqmvglhvkcfaieofh.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const login = document.getElementById("login");
+const gallery = document.getElementById("gallery");
+const message = document.getElementById("message");
+const photos = document.getElementById("photos");
+
+async function loadPhotos() {
+  photos.innerHTML = "";
+  message.textContent = "Fotoğraflar yükleniyor...";
+
+  const { data, error } = await db.storage
+    .from("foto-inbox")
+    .list("", {
+      limit: 100,
+      sortBy: { column: "created_at", order: "desc" }
+    });
+
+  if (error) {
+    message.textContent = "Fotoğraflar alınamadı: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    message.textContent = "Henüz fotoğraf bulunmuyor.";
+    return;
+  }
+
+  let count = 0;
+
+  for (const file of data) {
+    if (!file.name || file.name.startsWith(".")) continue;
+
+    const { data: signed, error: signError } =
+      await db.storage
+        .from("foto-inbox")
+        .createSignedUrl(file.name, 60);
+
+    if (signError) continue;
+
+    const card = document.createElement("div");
+    card.className = "photo";
+
+    const img = document.createElement("img");
+    img.src = signed.signedUrl;
+    img.alt = "Gönderilen fotoğraf";
+
+    const name = document.createElement("p");
+    name.textContent = file.name;
+
+    card.appendChild(img);
+    card.appendChild(name);
+    photos.appendChild(card);
+    count++;
+  }
+
+  message.textContent = count
+    ? count + " fotoğraf listelendi."
+    : "Görüntülenebilir fotoğraf bulunamadı. Depolama izinlerini kontrol et.";
+}
+
+document.getElementById("loginBtn").onclick = async () => {
+  message.textContent = "Giriş kontrol ediliyor...";
+
+  const { error } = await db.auth.signInWithPassword({
+    email: document.getElementById("email").value,
+    password: document.getElementById("password").value
+  });
+
+  if (error) {
+    message.textContent = "Giriş başarısız: " + error.message;
+    return;
+  }
+
+  login.style.display = "none";
+  gallery.style.display = "block";
+  await loadPhotos();
+};
+
+document.getElementById("refreshBtn").onclick = loadPhotos;
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await db.auth.signOut();
+  gallery.style.display = "none";
+  login.style.display = "block";
+  photos.innerHTML = "";
+  message.textContent = "Çıkış yapıldı.";
+};
+
+(async () => {
+  const { data } = await db.auth.getSession();
+
+  if (data.session) {
+    login.style.display = "none";
+    gallery.style.display = "block";
+    await loadPhotos();
+  }
+})();
+</script>
+</body>
+</html>
