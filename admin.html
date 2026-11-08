@@ -2,221 +2,162 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>KLΛN BOT - Yönetici</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #151b27;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-    main {
-      max-width: 500px;
-      margin: 35px auto;
-      padding: 22px;
-      background: #202a3a;
-      border-radius: 15px;
-    }
-    h2, h3 { text-align: center; }
-    input, button {
-      width: 100%;
-      padding: 13px;
-      margin-top: 12px;
-      box-sizing: border-box;
-      border-radius: 8px;
-      border: 0;
-    }
-    button {
-      background: #3478e5;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:disabled {
-      opacity: .6;
-    }
-    img {
-      width: 100%;
-      margin-top: 12px;
-      border-radius: 10px;
-    }
-    .photo {
-      padding: 12px;
-      margin-top: 15px;
-      background: #151b27;
-      border-radius: 10px;
-    }
-    .save {
-      background: #168653;
-    }
-    #gallery { display: none; }
-    #message {
-      color: #a9c7ff;
-      overflow-wrap: anywhere;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klan Bot Yönetici</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{background:#151b27;color:white;font-family:Arial;padding:20px}
+main{max-width:500px;margin:auto}
+input,button{width:100%;padding:13px;margin:8px 0;box-sizing:border-box;border-radius:8px}
+input{border:1px solid #555;background:#222;color:white}
+button{background:#2878ff;color:white;border:0;font-weight:bold}
+img{width:100%;border-radius:10px;margin-top:10px}
+.photo{background:#222;padding:12px;margin:15px 0;border-radius:10px}
+#gallery,#recovery{display:none}
+</style>
 </head>
 <body>
 <main>
-  <h2>KLΛN BOT</h2>
+<h2>Klan Bot Yönetici</h2>
 
-  <section id="login">
-    <h3>Yönetici Girişi</h3>
-    <input id="email" type="email" placeholder="E-posta">
-    <input id="password" type="password" placeholder="Şifre">
-    <button id="loginBtn">GİRİŞ YAP</button>
-  </section>
+<div id="login">
+<input id="email" type="email" placeholder="Yönetici e-postası">
+<input id="password" type="password" placeholder="Şifre">
+<button id="loginBtn">GİRİŞ YAP</button>
+</div>
 
-  <section id="gallery">
-    <h3>Gönderilen Fotoğraflar</h3>
-    <button id="refreshBtn">FOTOĞRAFLARI YENİLE</button>
-    <button id="logoutBtn">ÇIKIŞ YAP</button>
-    <div id="photos"></div>
-  </section>
+<div id="recovery">
+<h3>Yeni şifre belirle</h3>
+<input id="newPassword" type="password" placeholder="Yeni şifre">
+<button id="savePassword">ŞİFREYİ KAYDET</button>
+</div>
 
-  <p id="message"></p>
+<div id="gallery">
+<h3>Gönderilen fotoğraflar</h3>
+<button id="refresh">FOTOĞRAFLARI YENİLE</button>
+<button id="logout">ÇIKIŞ YAP</button>
+<div id="photos"></div>
+</div>
+
+<p id="message"></p>
 </main>
 
 <script>
-const SUPABASE_URL =
-  "https://ljnaqmvglhvkcfaieofh.supabase.co";
+const SUPABASE_URL = "https://ljnaqmvglhvkcfaieofh.supabase.co";
+const SUPABASE_KEY = "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
 
-const SUPABASE_KEY =
-  "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+function show(id) {
+  $("login").style.display = id === "login" ? "block" : "none";
+  $("recovery").style.display = id === "recovery" ? "block" : "none";
+  $("gallery").style.display = id === "gallery" ? "block" : "none";
+}
 
-const login = document.getElementById("login");
-const gallery = document.getElementById("gallery");
-const message = document.getElementById("message");
-const photos = document.getElementById("photos");
+function msg(text) {
+  $("message").textContent = text;
+}
 
 async function loadPhotos() {
-  photos.innerHTML = "";
-  message.textContent = "Fotoğraflar yükleniyor...";
-
-  const { data, error } = await db.storage
-    .from("foto-inbox")
-    .list("", {
-      limit: 100,
-      sortBy: {
-        column: "created_at",
-        order: "desc"
-      }
-    });
+  $("photos").innerHTML = "Fotoğraflar yükleniyor...";
+  const { data, error } = await db.storage.from("foto-inbox")
+    .list("", { limit: 100, sortBy: { column: "created_at", order: "desc" } });
 
   if (error) {
-    message.textContent =
-      "Fotoğraflar alınamadı: " + error.message;
+    $("photos").textContent = "Fotoğraflar yüklenemedi: " + error.message;
     return;
   }
 
-  const files = (data || []).filter(file =>
-    file.name && !file.name.startsWith(".")
-  );
-
-  if (files.length === 0) {
-    message.textContent = "Henüz fotoğraf bulunmuyor.";
+  $("photos").innerHTML = "";
+  if (!data || data.length === 0) {
+    $("photos").textContent = "Henüz fotoğraf bulunamadı.";
     return;
   }
 
-  let count = 0;
-
-  for (const file of files) {
-    const { data: signed, error: signError } =
-      await db.storage
-        .from("foto-inbox")
-        .createSignedUrl(file.name, 300, {
-          download: file.name
-        });
-
-    if (signError) continue;
+  for (const file of data) {
+    if (!file.name || file.name === ".emptyFolderPlaceholder") continue;
+    const { data: signed, error: urlError } = await db.storage
+      .from("foto-inbox").createSignedUrl(file.name, 300);
+    if (urlError) continue;
 
     const card = document.createElement("div");
     card.className = "photo";
-
     const img = document.createElement("img");
     img.src = signed.signedUrl;
-    img.alt = "Gönderilen fotoğraf";
 
-    const name = document.createElement("p");
-    name.textContent = file.name;
-
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "save";
-    saveBtn.textContent = "GALERİYE KAYDET";
-
-    saveBtn.onclick = () => {
-      const link = document.createElement("a");
-      link.href = signed.signedUrl;
-      link.download = file.name;
-      link.target = "_blank";
-      link.rel = "noopener";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    };
+    const download = document.createElement("a");
+    download.href = signed.signedUrl;
+    download.download = file.name;
+    download.textContent = "GALERİYE KAYDET";
+    download.style.color = "white";
+    download.style.display = "block";
+    download.style.padding = "12px";
 
     card.appendChild(img);
-    card.appendChild(name);
-    card.appendChild(saveBtn);
-    photos.appendChild(card);
-
-    count++;
+    card.appendChild(download);
+    $("photos").appendChild(card);
   }
-
-  message.textContent = count
-    ? count + " fotoğraf listelendi."
-    : "Fotoğraf görüntülenemedi. Depolama izinlerini kontrol et.";
 }
 
-document.getElementById("loginBtn").onclick = async () => {
-  message.textContent = "Giriş kontrol ediliyor...";
-
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-
+$("loginBtn").onclick = async () => {
+  msg("Giriş yapılıyor...");
   const { error } = await db.auth.signInWithPassword({
-    email,
-    password
+    email: $("email").value,
+    password: $("password").value
   });
-
   if (error) {
-    message.textContent =
-      "Giriş başarısız: " + error.message;
+    msg("Giriş başarısız: " + error.message);
     return;
   }
-
-  login.style.display = "none";
-  gallery.style.display = "block";
-  await loadPhotos();
+  show("gallery");
+  msg("Giriş başarılı.");
+  loadPhotos();
 };
 
-document.getElementById("refreshBtn").onclick = loadPhotos;
+$("savePassword").onclick = async () => {
+  const password = $("newPassword").value;
+  if (password.length < 8) {
+    msg("Şifre en az 8 karakter olmalı.");
+    return;
+  }
+  const { error } = await db.auth.updateUser({ password });
+  if (error) {
+    msg("Şifre değiştirilemedi: " + error.message);
+    return;
+  }
+  msg("Şifre değiştirildi. Yeni şifrenle giriş yapabilirsin.");
+  show("login");
+};
 
-document.getElementById("logoutBtn").onclick = async () => {
+$("refresh").onclick = loadPhotos;
+$("logout").onclick = async () => {
   await db.auth.signOut();
-  gallery.style.display = "none";
-  login.style.display = "block";
-  photos.innerHTML = "";
-  document.getElementById("password").value = "";
-  message.textContent = "Çıkış yapıldı.";
+  show("login");
+  msg("Çıkış yapıldı.");
 };
+
+db.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") {
+    show("recovery");
+    msg("Yeni şifreni belirleyebilirsin.");
+  } else if (event === "SIGNED_IN" && session) {
+    show("gallery");
+    loadPhotos();
+  }
+});
 
 (async () => {
+  const recoveryLink = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery";
+  if (recoveryLink) {
+    show("recovery");
+    return;
+  }
   const { data } = await db.auth.getSession();
-
   if (data.session) {
-    login.style.display = "none";
-    gallery.style.display = "block";
-    await loadPhotos();
+    show("gallery");
+    loadPhotos();
   }
 })();
 </script>
