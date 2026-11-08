@@ -5,172 +5,156 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#151b27">
-  <title>KLΛN BOT</title>
+  <title>KLΛN BOT - Fotoğraf Onayı</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
+      padding: 20px;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 22px;
-      font-family: Arial, sans-serif;
-      color: #eef3fb;
       background: #151b27;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     main {
-      width: min(100%, 440px);
-      padding: 28px;
+      width: 100%;
+      max-width: 430px;
+      padding: 25px;
       background: #202a3a;
-      border: 1px solid #34445d;
       border-radius: 18px;
-      box-shadow: 0 18px 50px #0005;
+      text-align: center;
     }
 
-    h1 {
-      margin: 0 0 8px;
-      text-align: center;
-      letter-spacing: 2px;
-    }
-
-    .sub {
-      text-align: center;
-      color: #8fb5ff;
-      margin: 0 0 24px;
-      font-size: 13px;
-    }
+    h2 { margin-top: 5px; }
 
     p {
       color: #cbd5e1;
-      line-height: 1.65;
-      font-size: 14px;
-    }
-
-    .actions {
-      display: grid;
-      gap: 10px;
-      margin-top: 22px;
+      line-height: 1.6;
     }
 
     button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 13px;
       border: 0;
-      border-radius: 10px;
-      padding: 13px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    #allow, #capture, #confirm {
-      color: white;
+      border-radius: 9px;
       background: #3478e5;
+      color: white;
+      font-weight: bold;
+      font-size: 15px;
     }
 
-    #deny, #again {
-      color: #dbe4f2;
-      background: #39465a;
+    button:disabled {
+      opacity: .45;
     }
 
-    #capture, #confirm, #again {
+    .green { background: #168653; }
+    .red { background: #a33b48; }
+
+    #message {
+      margin-top: 18px;
+      overflow-wrap: anywhere;
+      color: #a9c7ff;
+    }
+
+    #consentArea {
       display: none;
+      margin-top: 18px;
+      padding: 12px;
+      background: #151b27;
+      border-radius: 10px;
+      text-align: left;
     }
 
-    video {
+    #consentArea label {
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    #camera {
       position: absolute;
       width: 1px;
       height: 1px;
       opacity: 0;
       pointer-events: none;
     }
-
-    img {
-      display: none;
-      width: 100%;
-      margin-top: 16px;
-      border-radius: 12px;
-      background: #080c13;
-    }
-
-    #cameraNotice {
-      display: none;
-      padding: 14px;
-      margin-top: 16px;
-      text-align: center;
-      background: #172c49;
-      border: 1px solid #3478e5;
-      border-radius: 10px;
-      color: #a9c7ff;
-      font-size: 13px;
-    }
-
-    #status {
-      min-height: 20px;
-      text-align: center;
-      font-size: 13px;
-      color: #a9c7ff;
-    }
-
-    .small {
-      font-size: 12px;
-      color: #9aa9bd;
-    }
   </style>
 </head>
 
 <body>
 <main>
-  <h1>KLΛN BOT</h1>
-  <div class="sub">GÜVENLİK DOĞRULAMASI</div>
+  <h2>KLΛN BOT</h2>
+  <h3>Fotoğraf Onayı</h3>
 
   <p>
-    Platformumuza hoş geldiniz. Kamera izni verdiğinizde
-    kamera aktif olur ancak canlı görüntü ekranda gösterilmez.
-    Fotoğrafı kendiniz çekebilir, önizleyebilir ve
-    göndermeden önce ayrıca onaylayabilirsiniz.
+    Bu sayfa kamera izninizi kullanarak bir fotoğraf çekmenizi sağlar.
+    Fotoğrafı çekmeden önce sizden izin istenir.
+    Onay verirseniz fotoğraf site yöneticisine gönderilir.
+    Fotoğraf özel depolama alanında saklanır.
   </p>
-
-  <div class="actions">
-    <button id="allow">KAMERA İZNİ VER</button>
-    <button id="capture">FOTOĞRAF ÇEK</button>
-    <button id="confirm">FOTOĞRAFI ONAYLA</button>
-    <button id="again">YENİDEN ÇEK</button>
-    <button id="deny">REDDET</button>
-  </div>
-
-  <div id="cameraNotice">
-    Kamera aktif. Fotoğraf çekmek için aşağıdaki düğmeye basın.
-  </div>
 
   <video id="camera" autoplay playsinline muted></video>
-  <img id="preview" alt="Çekilen fotoğrafın önizlemesi">
 
-  <p id="status" role="status" aria-live="polite"></p>
+  <button id="allowBtn">KAMERA İZNİ VER</button>
 
-  <p class="small">
-    Fotoğraf bu örnek sayfada sunucuya yüklenmez.
-    Kamera izni ve fotoğraf çekimi ziyaretçinin kontrolündedir.
-  </p>
+  <button id="captureBtn" disabled>
+    FOTOĞRAF ÇEK
+  </button>
+
+  <div id="consentArea">
+    <label>
+      <input type="checkbox" id="consent">
+      Çektiğim fotoğrafın KLΛN BOT yöneticisine gönderilmesini onaylıyorum.
+    </label>
+
+    <button id="sendBtn" class="green" disabled>
+      FOTOĞRAFI GÖNDER
+    </button>
+  </div>
+
+  <button id="againBtn" class="red" style="display:none">
+    YENİDEN ÇEK
+  </button>
+
+  <button id="denyBtn" class="red">
+    İPTAL ET
+  </button>
+
+  <p id="message"></p>
 </main>
 
 <script>
-const allowBtn = document.getElementById('allow');
-const captureBtn = document.getElementById('capture');
-const confirmBtn = document.getElementById('confirm');
-const againBtn = document.getElementById('again');
-const denyBtn = document.getElementById('deny');
+const SUPABASE_URL =
+  "https://ljnaqmvglhvkcfaieofh.supabase.co";
 
-const video = document.getElementById('camera');
-const preview = document.getElementById('preview');
-const status = document.getElementById('status');
-const cameraNotice = document.getElementById('cameraNotice');
+const SUPABASE_KEY =
+  "sb_publishable_XD9Ra40KtVTxRkHnE_3nVQ_MJJJFFKx";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const video = document.getElementById("camera");
+const allowBtn = document.getElementById("allowBtn");
+const captureBtn = document.getElementById("captureBtn");
+const sendBtn = document.getElementById("sendBtn");
+const againBtn = document.getElementById("againBtn");
+const denyBtn = document.getElementById("denyBtn");
+const consent = document.getElementById("consent");
+const consentArea = document.getElementById("consentArea");
+const message = document.getElementById("message");
 
 let stream = null;
-let photoData = null;
+let photoBlob = null;
 
 function stopCamera() {
   if (stream) {
@@ -179,124 +163,133 @@ function stopCamera() {
   }
 
   video.srcObject = null;
+  captureBtn.disabled = true;
 }
 
-allowBtn.addEventListener('click', async () => {
-  if (!navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia) {
-    status.textContent =
-      'Kamera için HTTPS bağlantısı ve desteklenen tarayıcı gereklidir.';
-    return;
-  }
+function resetPage() {
+  stopCamera();
+  photoBlob = null;
+  consent.checked = false;
+  consentArea.style.display = "none";
+  againBtn.style.display = "none";
+  allowBtn.disabled = false;
+  allowBtn.style.display = "block";
+  captureBtn.disabled = true;
+  message.textContent = "";
+}
 
+allowBtn.onclick = async () => {
   try {
-    stopCamera();
+    message.textContent = "Kamera izni bekleniyor...";
 
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
+      video: { facingMode: "user" },
       audio: false
     });
 
     video.srcObject = stream;
     await video.play();
 
-    if (!video.videoWidth) {
-      await new Promise(resolve => {
-        video.addEventListener('loadedmetadata', resolve, {
-          once: true
-        });
-      });
-    }
-
-    allowBtn.style.display = 'none';
-    captureBtn.style.display = 'block';
-    cameraNotice.style.display = 'block';
-
-    status.textContent =
-      'Kamera açıldı. Fotoğraf çekmek için düğmeye basın.';
+    allowBtn.style.display = "none";
+    captureBtn.disabled = false;
+    message.textContent =
+      "Kamera hazır. Fotoğraf çekmek için butona basın.";
 
   } catch (error) {
-    stopCamera();
-
-    status.textContent =
-      'Kamera açılamadı. İzinleri ve tarayıcı ayarlarını kontrol edin.';
-
-    console.error('Kamera hatası:', error);
+    message.textContent =
+      "Kamera açılamadı. Kamera iznini ve site bağlantısını kontrol edin.";
   }
-});
+};
 
-captureBtn.addEventListener('click', () => {
-  if (!stream || !video.videoWidth) {
-    status.textContent = 'Kamera hazır değil.';
+captureBtn.onclick = async () => {
+  if (!stream) return;
+
+  if (!video.videoWidth || !video.videoHeight) {
+    message.textContent = "Kamera henüz hazır değil.";
     return;
   }
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  const context = canvas.getContext('2d');
+  const context = canvas.getContext("2d");
   context.drawImage(video, 0, 0);
 
-  photoData = canvas.toDataURL('image/jpeg', 0.9);
-
-  preview.src = photoData;
-  preview.style.display = 'block';
+  photoBlob = await new Promise(resolve => {
+    canvas.toBlob(resolve, "image/jpeg", 0.9);
+  });
 
   stopCamera();
 
-  cameraNotice.style.display = 'none';
-  captureBtn.style.display = 'none';
-  confirmBtn.style.display = 'block';
-  againBtn.style.display = 'block';
-
-  status.textContent =
-    'Fotoğraf çekildi. Önizlemeyi kontrol edin.';
-});
-
-againBtn.addEventListener('click', () => {
-  preview.style.display = 'none';
-  confirmBtn.style.display = 'none';
-  againBtn.style.display = 'none';
-
-  photoData = null;
-
-  allowBtn.style.display = 'block';
-
-  status.textContent =
-    'Yeniden çekmek için kamera izni verin.';
-});
-
-confirmBtn.addEventListener('click', () => {
-  if (!photoData) {
-    status.textContent = 'Önce fotoğraf çekmelisiniz.';
+  if (!photoBlob) {
+    message.textContent = "Fotoğraf oluşturulamadı.";
     return;
   }
 
-  status.textContent =
-    'Onay alındı. Bu örnek sayfada sunucuya gönderim yapılmamaktadır.';
+  consentArea.style.display = "block";
+  againBtn.style.display = "block";
+  captureBtn.disabled = true;
 
-  confirmBtn.style.display = 'none';
-});
+  message.textContent =
+    "Fotoğraf hazır. Göndermek için aşağıdaki onayı vermelisiniz.";
+};
 
-denyBtn.addEventListener('click', () => {
-  stopCamera();
+consent.onchange = () => {
+  sendBtn.disabled = !consent.checked || !photoBlob;
+};
 
-  video.style.display = 'none';
-  preview.style.display = 'none';
-  cameraNotice.style.display = 'none';
+sendBtn.onclick = async () => {
+  if (!photoBlob || !consent.checked) return;
 
-  captureBtn.style.display = 'none';
-  confirmBtn.style.display = 'none';
-  againBtn.style.display = 'none';
-  allowBtn.style.display = 'block';
+  sendBtn.disabled = true;
+  againBtn.disabled = true;
+  denyBtn.disabled = true;
 
-  photoData = null;
+  message.textContent = "Fotoğraf gönderiliyor...";
 
-  status.textContent = 'Kamera doğrulaması reddedildi.';
-});
+  const fileName =
+    Date.now() + "-" + crypto.randomUUID() + ".jpg";
 
-window.addEventListener('pagehide', stopCamera);
+  const { error } = await db.storage
+    .from("foto-inbox")
+    .upload(fileName, photoBlob, {
+      contentType: "image/jpeg",
+      upsert: false
+    });
+
+  if (error) {
+    message.textContent =
+      "Gönderilemedi: " + error.message;
+
+    sendBtn.disabled = false;
+    againBtn.disabled = false;
+    denyBtn.disabled = false;
+    return;
+  }
+
+  photoBlob = null;
+  consentArea.style.display = "none";
+  againBtn.style.display = "none";
+
+  message.textContent =
+    "Fotoğrafınız onayınızla yöneticiye gönderildi.";
+
+  denyBtn.textContent = "TAMAM";
+  denyBtn.disabled = false;
+};
+
+againBtn.onclick = () => {
+  resetPage();
+  message.textContent = "Yeniden başlayabilirsiniz.";
+};
+
+denyBtn.onclick = () => {
+  resetPage();
+  message.textContent = "İşlem iptal edildi.";
+};
+
+window.addEventListener("pagehide", stopCamera);
 </script>
 </body>
 </html>
