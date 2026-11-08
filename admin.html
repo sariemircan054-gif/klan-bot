@@ -9,19 +9,19 @@
   <style>
     body {
       margin: 0;
-      padding: 25px;
+      padding: 20px;
       background: #151b27;
       color: white;
       font-family: Arial, sans-serif;
     }
     main {
       max-width: 500px;
-      margin: 40px auto;
+      margin: 35px auto;
       padding: 22px;
       background: #202a3a;
       border-radius: 15px;
     }
-    h2 { text-align: center; }
+    h2, h3 { text-align: center; }
     input, button {
       width: 100%;
       padding: 13px;
@@ -36,6 +36,9 @@
       font-weight: bold;
       cursor: pointer;
     }
+    button:disabled {
+      opacity: .6;
+    }
     img {
       width: 100%;
       margin-top: 12px;
@@ -47,16 +50,22 @@
       background: #151b27;
       border-radius: 10px;
     }
+    .save {
+      background: #168653;
+    }
     #gallery { display: none; }
-    #message { color: #a9c7ff; }
+    #message {
+      color: #a9c7ff;
+      overflow-wrap: anywhere;
+    }
   </style>
 </head>
 <body>
 <main>
   <h2>KLΛN BOT</h2>
-  <h3>Yönetici Girişi</h3>
 
   <section id="login">
+    <h3>Yönetici Girişi</h3>
     <input id="email" type="email" placeholder="E-posta">
     <input id="password" type="password" placeholder="Şifre">
     <button id="loginBtn">GİRİŞ YAP</button>
@@ -97,28 +106,36 @@ async function loadPhotos() {
     .from("foto-inbox")
     .list("", {
       limit: 100,
-      sortBy: { column: "created_at", order: "desc" }
+      sortBy: {
+        column: "created_at",
+        order: "desc"
+      }
     });
 
   if (error) {
-    message.textContent = "Fotoğraflar alınamadı: " + error.message;
+    message.textContent =
+      "Fotoğraflar alınamadı: " + error.message;
     return;
   }
 
-  if (!data || data.length === 0) {
+  const files = (data || []).filter(file =>
+    file.name && !file.name.startsWith(".")
+  );
+
+  if (files.length === 0) {
     message.textContent = "Henüz fotoğraf bulunmuyor.";
     return;
   }
 
   let count = 0;
 
-  for (const file of data) {
-    if (!file.name || file.name.startsWith(".")) continue;
-
+  for (const file of files) {
     const { data: signed, error: signError } =
       await db.storage
         .from("foto-inbox")
-        .createSignedUrl(file.name, 60);
+        .createSignedUrl(file.name, 300, {
+          download: file.name
+        });
 
     if (signError) continue;
 
@@ -132,27 +149,48 @@ async function loadPhotos() {
     const name = document.createElement("p");
     name.textContent = file.name;
 
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "save";
+    saveBtn.textContent = "GALERİYE KAYDET";
+
+    saveBtn.onclick = () => {
+      const link = document.createElement("a");
+      link.href = signed.signedUrl;
+      link.download = file.name;
+      link.target = "_blank";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+
     card.appendChild(img);
     card.appendChild(name);
+    card.appendChild(saveBtn);
     photos.appendChild(card);
+
     count++;
   }
 
   message.textContent = count
     ? count + " fotoğraf listelendi."
-    : "Görüntülenebilir fotoğraf bulunamadı. Depolama izinlerini kontrol et.";
+    : "Fotoğraf görüntülenemedi. Depolama izinlerini kontrol et.";
 }
 
 document.getElementById("loginBtn").onclick = async () => {
   message.textContent = "Giriş kontrol ediliyor...";
 
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
   const { error } = await db.auth.signInWithPassword({
-    email: document.getElementById("email").value,
-    password: document.getElementById("password").value
+    email,
+    password
   });
 
   if (error) {
-    message.textContent = "Giriş başarısız: " + error.message;
+    message.textContent =
+      "Giriş başarısız: " + error.message;
     return;
   }
 
@@ -168,6 +206,7 @@ document.getElementById("logoutBtn").onclick = async () => {
   gallery.style.display = "none";
   login.style.display = "block";
   photos.innerHTML = "";
+  document.getElementById("password").value = "";
   message.textContent = "Çıkış yapıldı.";
 };
 
